@@ -1,0 +1,60 @@
+name: Generate Math Pattern Remotely
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-pattern:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Configure Git Bot
+        run: |
+          git config --global user.name "${{ github.repository_owner }}"
+          git config --global user.email "${{ github.repository_owner }}@users.noreply.github.com"
+
+      - name: Generate the Sine Wave Commits
+        run: |
+          cat << 'EOF' > generate_wave.py
+          import os
+          import math
+          from datetime import datetime, timedelta
+
+          def make_commits():
+              start_date = datetime.now() - timedelta(days=365)
+
+              for day in range(365):
+                  wave_height = round(3 + 3 * math.sin(day * 0.15))
+                  current_date = start_date + timedelta(days=day)
+                  day_of_week = current_date.weekday()
+
+                  if day_of_week == wave_height:
+                      date_str = current_date.strftime('%Y-%m-%dT12:00:00')
+
+                      with open('wave_data.txt', 'a') as file:
+                          file.write(f'Math wave on {date_str}\n')
+
+                      os.system('git add wave_data.txt')
+                      os.system(f'GIT_AUTHOR_DATE="{date_str}" GIT_COMMITTER_DATE="{date_str}" git commit -m "Wave dot"')
+
+          if __name__ == "__main__":
+              make_commits()
+          EOF
+
+          python generate_wave.py
+
+      - name: Push the Wave to GitHub
+        run: |
+          git push origin HEAD
